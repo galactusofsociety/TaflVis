@@ -2,29 +2,23 @@ import React, { useState, useCallback } from 'react';
 import Tree from 'react-d3-tree';
 import { Play, BookOpen, Type, Info, ChevronRight, Hash } from 'lucide-react';
 
-/**
- * LOGIC SECTION: Parsing and Tree Generation
- */
 
-// Converts text input "S -> a B" into { S: [ ["a", "B"] ] }
 const parseRules = (text) => {
   const grammar = {};
   text.split('\n').filter(line => line.trim()).forEach(line => {
     const [lhs, rhs] = line.split('->').map(s => s.trim());
     if (lhs && rhs) {
-      // Split by | for multiple productions, then by space for individual symbols
+    
       grammar[lhs] = rhs.split('|').map(p => p.trim().split(/\s+/));
     }
   });
   return grammar;
 };
 
-// Recursive function to build a tree based on the grammar and target string
 const buildParseTree = (grammar, symbol, tokens, index = 0, depth = 0) => {
-  // Prevent infinite loops in left-recursive grammars for this simple visualizer
   if (depth > 15) return null; 
 
-  // Case 1: Terminal (leaf node)
+ 
   if (!grammar[symbol]) {
     if (tokens[index] === symbol) {
       return { node: { name: symbol, children: [] }, nextIndex: index + 1 };
@@ -32,7 +26,7 @@ const buildParseTree = (grammar, symbol, tokens, index = 0, depth = 0) => {
     return null;
   }
 
-  // Case 2: Non-terminal (branch node) - Try each production rule
+ 
   for (let production of grammar[symbol]) {
     let currentIndex = index;
     let children = [];
@@ -56,12 +50,12 @@ const buildParseTree = (grammar, symbol, tokens, index = 0, depth = 0) => {
   return null;
 };
 
-// Generates the step-by-step derivation sequence from the tree
+
 const generateDerivations = (node) => {
   const steps = [];
   const resolve = (currentNodes) => {
     steps.push(currentNodes.map(n => n.name).join(' '));
-    // Leftmost derivation logic: find first node with children and expand it
+    
     const idx = currentNodes.findIndex(n => n.children && n.children.length > 0);
     if (idx !== -1) {
       const target = currentNodes[idx];
@@ -77,9 +71,7 @@ const generateDerivations = (node) => {
   return steps;
 };
 
-/**
- * UI SECTION
- */
+
 export default function App() {
   const [grammarText, setGrammarText] = useState("S -> A B\nA -> a\nB -> b");
   const [inputString, setInputString] = useState("ab");
@@ -114,7 +106,7 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         
-        {/* Header */}
+     
         <header className="mb-8 border-b pb-6 border-slate-200">
           <h1 className="text-3xl font-black text-indigo-600 flex items-center gap-2">
             <Hash className="text-indigo-400" /> CFG Visualizer
@@ -124,7 +116,7 @@ export default function App() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* Sidebar: Configuration */}
+        
           <div className="lg:col-span-4 space-y-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center gap-2 mb-4 text-slate-700 font-bold">
@@ -165,10 +157,10 @@ export default function App() {
             </div>
           </div>
 
-          {/* Main Content: Results */}
+         
           <div className="lg:col-span-8 space-y-6">
             
-            {/* Parse Tree Panel */}
+           
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                 <h3 className="text-sm font-bold text-slate-600 uppercase tracking-widest">Parse Tree Visualization</h3>
@@ -191,7 +183,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Derivation Sequence Panel */}
+          
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <h3 className="text-sm font-bold text-slate-600 uppercase tracking-widest mb-4">Leftmost Derivation Sequence</h3>
               <div className="space-y-3">
