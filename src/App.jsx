@@ -145,7 +145,7 @@ export default function App() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
             <div className="lg:col-span-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Grammar Rules</label>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Grammar Rules(Space Seperated)</label>
               <textarea className="w-full h-40 p-4 font-mono text-xs bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 outline-none shadow-inner" value={grammar} onChange={e => setGrammar(e.target.value)} />
               
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mt-4 mb-2">Input String</label>
