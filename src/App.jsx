@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import Tree from 'react-d3-tree';
 import { 
-  Play, BookOpen, Type, Info, ChevronRight, Hash, 
-  AlignLeft, AlignRight, Zap, GraduationCap, LayoutDashboard,
-  Code2, AlertCircle
+  Play, Terminal, Layers, GraduationCap, GitBranch, BookOpenText
 } from 'lucide-react';
-
 
 class EarleyParser {
   constructor(grammarText) {
@@ -34,7 +31,6 @@ class EarleyParser {
     if (!this.startSymbol) return null;
 
     const charts = Array.from({ length: tokens.length + 1 }, () => []);
-
     this.grammar.filter(p => p.lhs === this.startSymbol).forEach(p => {
       charts[0].push({ lhs: p.lhs, rhs: p.rhs, dot: 0, start: 0, children: [] });
     });
@@ -57,12 +53,7 @@ class EarleyParser {
             const newState = { lhs: p.lhs, rhs: p.rhs, dot: 0, start: i, children: [] };
             if (!this.hasState(charts[i], newState)) charts[i].push(newState);
           });
-          if (this.grammar.some(p => p.lhs === nextSymbol && p.rhs.length === 0)) {
-             const newState = { ...state, dot: state.dot + 1, children: [...state.children, {lhs: nextSymbol, rhs:['ε'], dot:1, start:i, children:[]}]};
-             if (!this.hasState(charts[i], newState)) charts[i].push(newState);
-          }
         } else {
-        
           if (i < tokens.length && nextSymbol === tokens[i]) {
             const newState = { ...state, dot: state.dot + 1, children: [...state.children, { name: nextSymbol, isTerminal: true }] };
             if (!this.hasState(charts[i + 1], newState)) charts[i + 1].push(newState);
@@ -90,7 +81,6 @@ class EarleyParser {
   }
 }
 
-
 const generateDerivations = (root, mode = 'left') => {
   if (!root) return [];
   let steps = [[root]];
@@ -99,7 +89,9 @@ const generateDerivations = (root, mode = 'left') => {
     let current = steps[steps.length - 1];
     let idx = mode === 'left' ? current.findIndex(n => !n.isTerminal) : -1;
     if (mode === 'right') {
-      for (let i = current.length - 1; i >= 0; i--) { if (!current[i].isTerminal) { idx = i; break; } }
+      for (let i = current.length - 1; i >= 0; i--) {
+        if (!current[i].isTerminal) { idx = i; break; }
+      }
     }
     if (idx === -1) break;
     const next = [...current.slice(0, idx), ...current[idx].children, ...current.slice(idx + 1)];
@@ -110,82 +102,260 @@ const generateDerivations = (root, mode = 'left') => {
 };
 
 
-export default function App() {
+
+const Visualizer = () => {
   const [grammar, setGrammar] = useState("S → S a | b");
   const [input, setInput] = useState("baaa");
   const [tree, setTree] = useState(null);
   const [derivs, setDerivs] = useState({ l: [], r: [] });
-  const [error, setError] = useState("");
 
   const run = () => {
-    setError("");
     const parser = new EarleyParser(grammar);
-    const result = parser.getTree(input);
-    if (result) {
-      setTree(result);
-      setDerivs({ l: generateDerivations(result, 'left'), r: generateDerivations(result, 'right') });
+    const res = parser.getTree(input);
+    if (res) {
+      setTree(res);
+      setDerivs({
+        l: generateDerivations(res, 'left'),
+        r: generateDerivations(res, 'right')
+      });
     } else {
-      setError("Rejected: Invalid string for this grammar.");
       setTree(null);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex text-slate-800 font-sans">
-      <aside className="w-64 bg-slate-900 text-white p-8 hidden lg:flex flex-col">
-        <h1 className="text-2xl font-black mb-10 text-indigo-400 tracking-tighter italic">CFG PRO</h1>
-        <nav className="space-y-4">
-          <div className="flex items-center gap-2 text-indigo-400 font-bold"><LayoutDashboard size={20}/> Visualizer</div>
-          <div className="text-slate-500 flex items-center gap-2 px-1 text-sm"><Info size={16}/> Logic: Earley Parser</div>
-        </nav>
-      </aside>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="bg-slate-900 p-6 rounded-2xl space-y-4">
+        <h2 className="text-cyan-400 font-bold flex gap-2"><Terminal/> CFG Input</h2>
+        <textarea value={grammar} onChange={e=>setGrammar(e.target.value)} className="w-full h-40 bg-black p-3 rounded"/>
+        <input value={input} onChange={e=>setInput(e.target.value)} className="w-full bg-black p-3 rounded"/>
+        <button onClick={run} className="w-full bg-cyan-500 py-3 rounded flex justify-center gap-2">
+          <Play/> Generate Tree
+        </button>
+      </div>
 
-      <main className="flex-1 p-6 lg:p-10 overflow-auto">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-            <div className="lg:col-span-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Grammar Rules(Space Seperated)</label>
-              <textarea className="w-full h-40 p-4 font-mono text-xs bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 outline-none shadow-inner" value={grammar} onChange={e => setGrammar(e.target.value)} />
-              
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mt-4 mb-2">Input String</label>
-              <input className="w-full p-4 font-mono text-xs bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 outline-none shadow-inner" value={input} onChange={e => setInput(e.target.value)} />
-              
-              <button onClick={run} className="w-full mt-6 bg-indigo-600 text-white py-4 rounded-2xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"><Zap size={18} fill="currentColor"/> ANALYZE</button>
-              {error && <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold flex items-center gap-2 border border-red-100 uppercase"><AlertCircle size={14}/> {error}</div>}
-            </div>
+      <div className="lg:col-span-2 bg-white rounded-2xl p-4">
+        {tree ? (
+          <Tree data={tree} orientation="vertical" translate={{x:300,y:50}}/>
+        ) : (
+          <div className="h-96 flex items-center justify-center text-slate-500">No Tree</div>
+        )}
+      </div>
 
-            
-            <div className="lg:col-span-8 bg-white rounded-3xl border border-slate-200 shadow-sm h-[500px] relative overflow-hidden">
-               <div className="absolute top-6 left-6 font-bold text-[10px] text-slate-400 uppercase tracking-widest z-10">Parse Tree</div>
-               {tree ? <Tree data={tree} orientation="vertical" pathFunc="step" translate={{ x: 300, y: 50 }} /> : <div className="h-full flex items-center justify-center text-slate-300 italic">No structure generated.</div>}
-            </div>
-          </div>
+      <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-5 rounded-2xl border border-slate-700 shadow-lg">
+  <div className="flex items-center justify-between mb-4">
+    <h3 className="text-cyan-400 font-bold text-sm uppercase tracking-wider">Left Derivation</h3>
+    <span className="text-xs text-slate-500">Steps: {derivs.l.length}</span>
+  </div>
+  <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+    {derivs.l.map((s,i)=>(
+      <div key={i} className="flex items-center gap-3 bg-black/40 border border-slate-700 rounded-xl px-3 py-2 hover:border-cyan-500/40 transition">
+        <span className="text-xs font-bold text-slate-500 w-5">{i}</span>
+        <span className="text-cyan-500">⇒</span>
+        <span className="font-mono text-sm tracking-wide text-white">
+          {s.split('').map((ch,ci)=>(
+            <span key={ci} className={/[A-Z]/.test(ch)?'text-cyan-400 font-bold':''}>{ch}</span>
+          ))}
+        </span>
+      </div>
+    ))}
+  </div>
+</div>
 
-         
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-10">
-            <DerivationView title="Leftmost" steps={derivs.l} icon={<AlignLeft size={16}/>} />
-            <DerivationView title="Rightmost" steps={derivs.r} icon={<AlignRight size={16}/>} />
-          </div>
-        </div>
-      </main>
+      <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-5 rounded-2xl border border-slate-700 shadow-lg">
+  <div className="flex items-center justify-between mb-4">
+    <h3 className="text-cyan-400 font-bold text-sm uppercase tracking-wider">Right Derivation</h3>
+    <span className="text-xs text-slate-500">Steps: {derivs.r.length}</span>
+  </div>
+  <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+    {derivs.r.map((s,i)=>(
+      <div key={i} className="flex items-center gap-3 bg-black/40 border border-slate-700 rounded-xl px-3 py-2 hover:border-cyan-500/40 transition">
+        <span className="text-xs font-bold text-slate-500 w-5">{i}</span>
+        <span className="text-cyan-500">⇒</span>
+        <span className="font-mono text-sm tracking-wide text-white">
+          {s.split('').map((ch,ci)=>(
+            <span key={ci} className={/[A-Z]/.test(ch)?'text-cyan-400 font-bold':''}>{ch}</span>
+          ))}
+        </span>
+      </div>
+    ))}
+  </div>
+</div>
     </div>
   );
-}
+};
 
-function DerivationView({ title, steps, icon }) {
-  return (
-    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-      <h3 className="flex items-center gap-2 text-indigo-600 font-bold uppercase text-xs tracking-widest mb-4">{icon} {title}</h3>
-      <div className="space-y-1">
-        {steps.map((s, i) => (
-          <div key={i} className="font-mono text-[11px] flex gap-2 p-2 bg-slate-50 rounded-lg">
-            <span className="text-slate-300 w-4">{i}</span>
-            <span className="text-indigo-400 font-bold italic">⇒</span>
-            <span className="text-slate-600">{s}</span>
-          </div>
-        ))}
+
+const Learning = () => (
+  <div className="max-w-6xl mx-auto space-y-12">
+
+    <div>
+      <h1 className="text-5xl font-bold text-cyan-400 mb-4">CFG → Parse Tree Guide</h1>
+      <p className="text-slate-400 max-w-2xl text-sm leading-relaxed">
+        This section helps you actually understand what your visualizer is doing under the hood — not just definitions, but how everything connects: grammar → derivation → parse tree → parsing algorithm.
+      </p>
+    </div>
+
+   
+    <div className="grid md:grid-cols-2 gap-6">
+
+      <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
+        <h2 className="text-xl font-bold mb-3 text-cyan-400">1. Context-Free Grammar (CFG)</h2>
+        <ul className="text-slate-400 text-sm space-y-2">
+          <li>• A CFG is defined as: (V, Σ, R, S)</li>
+          <li>• V → Non-terminals (variables)</li>
+          <li>• Σ → Terminals (actual symbols)</li>
+          <li>• R → Production rules</li>
+          <li>• S → Start symbol</li>
+        </ul>
       </div>
+
+      <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
+        <h2 className="text-xl font-bold mb-3 text-cyan-400">2. Parse Tree</h2>
+        <ul className="text-slate-400 text-sm space-y-2">
+          <li>• Root = Start symbol</li>
+          <li>• Internal nodes = Non-terminals</li>
+          <li>• Leaves = Terminals</li>
+          <li>• Shows how a string is generated structurally</li>
+        </ul>
+      </div>
+
+      <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
+        <h2 className="text-xl font-bold mb-3 text-cyan-400">3. Derivations</h2>
+        <ul className="text-slate-400 text-sm space-y-2">
+          <li>• Leftmost: expand leftmost non-terminal first</li>
+          <li>• Rightmost: expand rightmost non-terminal first</li>
+          <li>• Both produce same string, but different steps</li>
+        </ul>
+      </div>
+
+      <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
+        <h2 className="text-xl font-bold mb-3 text-cyan-400">4. Ambiguity</h2>
+        <ul className="text-slate-400 text-sm space-y-2">
+          <li>• A grammar is ambiguous if multiple parse trees exist</li>
+          <li>• Same string → different structures</li>
+          <li>• Common in arithmetic expressions</li>
+        </ul>
+      </div>
+
+    </div>
+
+   
+    <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
+      <h2 className="text-xl font-bold mb-3 text-cyan-400">Earley Parsing (What  tool uses)</h2>
+      <p className="text-slate-400 text-sm leading-relaxed mb-4">
+        The Earley parser is a powerful parsing algorithm that can handle all context-free grammars — even left-recursive ones.
+      </p>
+
+      <div className="grid md:grid-cols-3 gap-4 text-sm text-slate-400">
+        <div className="bg-black/40 p-4 rounded-xl border border-slate-700">
+          <h3 className="font-bold text-white mb-1">Predictor</h3>
+          Adds possible productions for a non-terminal.
+        </div>
+
+        <div className="bg-black/40 p-4 rounded-xl border border-slate-700">
+          <h3 className="font-bold text-white mb-1">Scanner</h3>
+          Matches terminals with input string.
+        </div>
+
+        <div className="bg-black/40 p-4 rounded-xl border border-slate-700">
+          <h3 className="font-bold text-white mb-1">Completer</h3>
+          Moves forward when a rule is fully matched.
+        </div>
+      </div>
+    </div>
+
+   
+    <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
+      <h2 className="text-xl font-bold mb-3 text-cyan-400">Worked Example</h2>
+      <pre className="bg-black p-4 rounded text-cyan-400 text-sm">
+S → S a | b
+Input: baaa
+      </pre>
+
+      <p className="text-slate-400 text-sm mt-4">
+        The grammar is left-recursive. A simple parser would fail, but Earley handles it.
+        The parse tree grows by repeatedly expanding S → S a until reaching base case S → b.
+      </p>
+    </div>
+
+
+    <div className="bg-gradient-to-r from-cyan-500/10 to-transparent p-6 rounded-2xl border border-cyan-500/20">
+      <h2 className="text-lg font-bold text-cyan-400 mb-2">Practical Tips</h2>
+      <ul className="text-slate-300 text-sm space-y-2">
+        <li>• If your string is rejected → check grammar completeness</li>
+        <li>• Use ε carefully (empty productions)</li>
+        <li>• Try ambiguous grammars to test multiple interpretations</li>
+        <li>• Keep non-terminals uppercase for clarity</li>
+      </ul>
+    </div>
+
+  </div>
+);
+
+export default function App(){
+  const [tab,setTab]=useState('home');
+
+  return (
+    <div className="min-h-screen bg-black text-white">
+
+      {tab==='home' && (
+        <div className="flex flex-col items-center justify-center min-h-screen text-center px-6 animate-in fade-in duration-700">
+          <h1 className="text-6xl md:text-7xl font-black tracking-tight mb-6">
+            CFG <span className="text-cyan-400">Parse Tree</span>
+          </h1>
+
+          <p className="max-w-xl text-slate-400 mb-10 text-sm leading-relaxed">
+            Visualize how Context-Free Grammars generate strings using parse trees and derivations.
+            Built with an Earley parser to support even complex and left-recursive grammars.
+          </p>
+
+          <div className="flex gap-6">
+            <button 
+              onClick={()=>setTab('viz')} 
+              className="px-8 py-4 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-2xl shadow-lg shadow-cyan-500/30 transition-all hover:scale-105 active:scale-95"
+            >
+              Open Visualizer
+            </button>
+
+            <button 
+              onClick={()=>setTab('learn')} 
+              className="px-8 py-4 bg-slate-800 hover:bg-slate-700 font-bold rounded-2xl transition-all hover:scale-105 active:scale-95"
+            >
+              Learn Concepts
+            </button>
+          </div>
+
+          <div className="mt-20 grid md:grid-cols-3 gap-6 max-w-4xl">
+            <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 hover:border-cyan-500/40 transition">
+              <h3 className="font-bold mb-2 text-cyan-400">Any CFG</h3>
+              <p className="text-slate-400 text-sm">Supports left recursion and complex productions.</p>
+            </div>
+
+            <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 hover:border-cyan-500/40 transition">
+              <h3 className="font-bold mb-2 text-cyan-400">Parse Tree</h3>
+              <p className="text-slate-400 text-sm">Instant visual structure of derivation.</p>
+            </div>
+
+            <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 hover:border-cyan-500/40 transition">
+              <h3 className="font-bold mb-2 text-cyan-400">Derivations</h3>
+              <p className="text-slate-400 text-sm">Leftmost & rightmost sequences generated.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab!=='home' && (
+        <div className="p-6">
+          <div className="flex gap-4 mb-6">
+            <button onClick={()=>setTab('home')} className="px-4 py-2 bg-slate-800 rounded">Home</button>
+            <button onClick={()=>setTab('viz')} className="px-4 py-2 bg-cyan-500 rounded">Visualizer</button>
+            <button onClick={()=>setTab('learn')} className="px-4 py-2 bg-slate-800 rounded">Learn</button>
+          </div>
+
+          {tab==='viz'?<Visualizer/>:<Learning/>}
+        </div>
+      )}
     </div>
   );
 }
